@@ -1,0 +1,17 @@
+[project]
+name = "ktdsmvp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "altair>=5.5.0",
+    "azure-identity>=1.23.1",
+    "azure-search-documents>=11.5.3",
+    "langchain>=0.3.26",
+    "langchain-community>=0.3.27",
+    "langchain-openai>=0.3.28",
+    "openpyxl>=3.1.5",
+    "python-dotenv>=1.1.1",
+    "streamlit>=1.47.0",
+]
