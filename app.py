@@ -35,8 +35,8 @@ llm = AzureChatOpenAI(
 st.markdown(
     """
     <div style="text-align:center; padding:10px; border:2px solid #4CAF50; border-radius:10px;">
-        <h2> 📊 KT 단말서비스 상용품질 모니터링</h2>
-        <h3> [ VOC 감정분석 / 유형분석 / 키워드분석 ]</h3>
+        <h2> 📊 KT 스마트폰 상용품질 모니터링</h2>
+        <h3> [ VOC 감정분석 / 결함유형 / 주요키워드 ]</h3>
     </div>
     """,
     unsafe_allow_html=True
@@ -100,8 +100,7 @@ sample_examples = [
 ]
 
 
-# --- VOC 유형분석 정의 ---
-
+# --- VOC 유형분석 정의 defect_classification 호출 ---
 
 
 # --- VOC 키워드 추출 정의 ---
@@ -142,84 +141,92 @@ def extract_keywords(user_input: str) -> List[str]:
 
 
 # --- Streamlit UI (사이드바 + 메인) ---
+# Streamlit의 session_state를 활용하여 분석 결과를 저장
+if "processed_df" not in st.session_state:
+    st.session_state.processed_df = None
+
 st.sidebar.header("📂 파일 업로드")
 uploaded_file = st.sidebar.file_uploader("엑셀(.xlsx/.xls) 파일을 업로드하세요", type=["xlsx", "xls"])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+    if st.session_state.processed_df is None:  # 분석이 아직 실행되지 않은 경우
+        df = pd.read_excel(uploaded_file)
 
-    # '내용' 필드를 'strReview'로 변경
-    if "내용" in df.columns:
-        df.rename(columns={"내용": "strReview"}, inplace=True)
+        # '내용' 필드를 'strReview'로 변경
+        if "내용" in df.columns:
+            df.rename(columns={"내용": "strReview"}, inplace=True)
 
-    text_col = next(
-        (col for col in df.columns if col.lower() == "strreview" or "text" in col.lower() or "의견" in col),
-        None
-    )
-
-    if not text_col:
-        st.error("❌ 텍스트 컬럼을 찾을 수 없습니다. 'strReview', 'text', '의견', '내용' 등을 컬럼명에 포함해주세요.")
-    else:
-        st.success(f"✅ 분석 대상 컬럼: **{text_col}**")
-
-        with st.spinner("📊 분석 중..."):
-            df["strEmotion"] = df[text_col].apply(lambda x: senti_classify(str(x), sample_examples))
-            df["strMainCategory"] = df[text_col].apply(lambda x: defect_classify(str(x)))
-            df["strKeyword"] = df[text_col].apply(lambda x: extract_keywords(str(x)))
-
-        st.success("✅ 분석 완료!")
-
-        # 결과 Preview
-        st.subheader("🔍 분석 결과 미리보기")
-        st.dataframe(df.head(10), use_container_width=True)  # 화면 전체 너비 사용
-
-        # 감정 분포 차트 (Altair)
-        st.subheader("😊 감정 분포")
-        emo_counts = df["strEmotion"].value_counts().reset_index()
-        emo_counts.columns = ['감정', '건수']
-        emo_chart = alt.Chart(emo_counts).mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5).encode(
-            x=alt.X('감정:N', title='감정'),
-            y=alt.Y('건수:Q', title='빈도수'),
-            color=alt.Color('감정:N', legend=None, scale=alt.Scale(scheme='category10'))
-        ).properties(width=400, height=300)
-        emo_text = emo_chart.mark_text(
-            align='center',
-            baseline='bottom',
-            dy=-5
-        ).encode(text='건수:Q')
-        st.altair_chart(emo_chart + emo_text, use_container_width=False)
-
-        # 결함 유형 분포 차트 (Altair)
-        st.subheader("🛠️ 결함유형 분포")
-        defect_counts = df["strMainCategory"].value_counts().reset_index()
-        defect_counts.columns = ['결함유형', '건수']
-        defect_chart = alt.Chart(defect_counts).mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5).encode(
-            x=alt.X('결함유형:N', sort='-y', title='결함유형'),
-            y=alt.Y('건수:Q', title='빈도수'),
-            color=alt.Color('결함유형:N', legend=None, scale=alt.Scale(scheme='tableau10'))
-        ).properties(width=400, height=300)
-        defect_text = defect_chart.mark_text(
-            align='center',
-            baseline='bottom',
-            dy=-5
-        ).encode(text='건수:Q')
-        st.altair_chart(defect_chart + defect_text, use_container_width=False)
-
-        # 키워드 Top 5 표 출력
-        st.subheader("🔑 키워드 Top 5")
-        all_keywords = sum(df["strKeyword"], [])
-        top5 = Counter(all_keywords).most_common(5)
-        top5_df = pd.DataFrame(top5, columns=["키워드", "언급 수"])
-        st.table(top5_df.style.set_properties(**{'font-size': '16px', 'text-align': 'center'}))
-
-        # 파일 다운로드
-        output = io.BytesIO()
-        df.to_excel(output, index=False, engine="openpyxl")
-        st.download_button(
-            label="📥 결과 엑셀 다운로드",
-            data=output.getvalue(),
-            file_name="분석결과.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        text_col = next(
+            (col for col in df.columns if col.lower() == "strreview" or "text" in col.lower() or "의견" in col),
+            None
         )
+
+        if not text_col:
+            st.error("❌ 텍스트 컬럼을 찾을 수 없습니다. 'strReview', 'text', '의견', '내용' 등을 컬럼명에 포함해주세요.")
+        else:
+            st.success(f"✅ 분석 대상 컬럼: **{text_col}**")
+
+            with st.spinner("📊 분석 중..."):
+                df["strEmotion"] = df[text_col].apply(lambda x: senti_classify(str(x), sample_examples))
+                df["strMainCategory"] = df[text_col].apply(lambda x: defect_classify(str(x)))
+                df["strKeyword"] = df[text_col].apply(lambda x: extract_keywords(str(x)))
+
+            st.session_state.processed_df = df  # 분석 결과를 session_state에 저장
+            st.success("✅ 분석 완료!")
+    else:
+        df = st.session_state.processed_df  # 기존 분석 결과를 불러옴
+
+    # 결과 Preview
+    st.subheader("🔍 분석 결과 미리보기")
+    st.dataframe(df.head(10), use_container_width=True)
+
+    # 감정 분포 차트
+    st.subheader("😊 감정 분포")
+    emo_counts = df["strEmotion"].value_counts().reset_index()
+    emo_counts.columns = ['감정', '건수']
+    emo_chart = alt.Chart(emo_counts).mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5).encode(
+        x=alt.X('감정:N', title='감정'),
+        y=alt.Y('건수:Q', title='빈도수'),
+        color=alt.Color('감정:N', legend=None, scale=alt.Scale(scheme='category10'))
+    ).properties(width=400, height=300)
+    emo_text = emo_chart.mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-5
+    ).encode(text='건수:Q')
+    st.altair_chart(emo_chart + emo_text, use_container_width=False)
+
+    # 결함 유형 분포 차트
+    st.subheader("🛠️ 결함유형 분포")
+    defect_counts = df["strMainCategory"].value_counts().reset_index()
+    defect_counts.columns = ['결함유형', '건수']
+    defect_chart = alt.Chart(defect_counts).mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5).encode(
+        x=alt.X('결함유형:N', sort='-y', title='결함유형'),
+        y=alt.Y('건수:Q', title='빈도수'),
+        color=alt.Color('결함유형:N', legend=None, scale=alt.Scale(scheme='tableau10'))
+    ).properties(width=400, height=300)
+    defect_text = defect_chart.mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-5
+    ).encode(text='건수:Q')
+    st.altair_chart(defect_chart + defect_text, use_container_width=False)
+
+    # 키워드 Top 5 표 출력
+    st.subheader("🔑 키워드 Top 5")
+    all_keywords = sum(df["strKeyword"], [])
+    top5 = Counter(all_keywords).most_common(5)
+    top5_df = pd.DataFrame(top5, columns=["키워드", "언급 수"])
+    st.table(top5_df.style.set_properties(**{'font-size': '16px', 'text-align': 'center'}))
+
+    # 파일 다운로드
+    output = io.BytesIO()
+    df.to_excel(output, index=False, engine="openpyxl")
+    st.download_button(
+        label="📥 결과 엑셀 다운로드",
+        data=output.getvalue(),
+        file_name="분석결과.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 else:
     st.info("⬅️ 사이드바에서 엑셀 파일을 업로드해주세요.")

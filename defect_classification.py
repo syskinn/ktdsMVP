@@ -2,7 +2,6 @@ import os
 import json
 from textwrap import dedent
 from typing import Literal
-
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI
 from langchain_core.example_selectors import SemanticSimilarityExampleSelector
@@ -20,7 +19,6 @@ llm_dep_name = "gpt-4.1"
 embed_dep_name = os.getenv("EMBEDDING_DEPLOYMENT_NAME")
 openai_endpoint = os.getenv("OPENAI_AZURE_ENDPOINT")
 AZURE_OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-
 azure_search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
 AZURE_SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
 search_index_name = os.getenv("AZURE_SEARCH_INDEX_NAME")
@@ -50,7 +48,6 @@ DEFECT_TYPES = Literal[
     "파일 처리 관련 결함", "시스템/데이터", "위치모드", "사용자 경험", "하드웨어",
     "외부기기 연동", "기타"
 ]
-
 
 class DefectClass(BaseModel):
     defect_type: DEFECT_TYPES = Field(description="결함유형")
