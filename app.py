@@ -1,6 +1,8 @@
 #시각화 및 웹앱 구성
 import streamlit as st
 import altair as alt
+from openai import OpenAIError 
+
 # 데이터 및 파일 처리
 import pandas as pd
 import openai
@@ -47,8 +49,8 @@ class Sentiment(BaseModel):
     sentiment: Literal["긍정", "부정"] = Field(description="sentiment of a sentence")
 
 system_template = """\
-당신은 주어진 문장의 감정을 '긍정'인지 '부정'인지 분류하는 감정 분석기입니다.
-아래 예시를 참고하여 새로운 문장의 감정을 정확히 판단하세요:
+당신은 텍스트의 감정 상태를 분석하는 분석 도우미입니다.
+주어진 문장을 읽고, 감정을 "긍정", "부정" 중 하나로 분류하세요.
 {examples}
 """
 
@@ -126,18 +128,18 @@ prompt_kw = ChatPromptTemplate.from_messages([
 
 keyword_chain = prompt_kw | llm.with_structured_output(KeywordExtraction)
 
+
 def extract_keywords(user_input: str) -> List[str]:
     if not user_input.strip():
         return ["입력된 문장이 없습니다."]
     try:
         result = keyword_chain.invoke({"text": user_input})
         return result.keywords
-    except openai.error.AuthenticationError:
-        return ["추출 실패: API 키 인증 오류"]
-    except openai.error.OpenAIError as e:
+    except OpenAIError as e:
         return [f"추출 실패: OpenAI API 오류 - {str(e)}"]
     except Exception as e:
         return [f"추출 실패: 알 수 없는 오류 - {str(e)}"]
+
 
 
 # --- Streamlit UI (사이드바 + 메인) ---
@@ -212,13 +214,24 @@ if uploaded_file:
     ).encode(text='건수:Q')
     st.altair_chart(defect_chart + defect_text, use_container_width=False)
 
-    # 키워드 Top 5 표 출력
-    st.subheader("🔑 키워드 Top 5")
-    all_keywords = sum(df["strKeyword"], [])
-    top5 = Counter(all_keywords).most_common(5)
-    top5_df = pd.DataFrame(top5, columns=["키워드", "언급 수"])
-    st.table(top5_df.style.set_properties(**{'font-size': '16px', 'text-align': 'center'}))
+    # 긍정/부정 키워드 Top 5
+    st.subheader("🟢 긍정/부정 키워드 Top 5")
+    positive_keywords = sum(df[df["strEmotion"] == "긍정"]["strKeyword"], [])
+    negative_keywords = sum(df[df["strEmotion"] == "부정"]["strKeyword"], [])
+    top5_pos = Counter(positive_keywords).most_common(5)
+    top5_neg = Counter(negative_keywords).most_common(5)
+    df_pos = pd.DataFrame(top5_pos, columns=["키워드", "긍정 언급 수"])
+    df_neg = pd.DataFrame(top5_neg, columns=["키워드", "부정 언급 수"])
 
+    # 컬럼 나눠서 출력
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**✅ 긍정 키워드 Top 5**")
+        st.table(df_pos)
+    with col2:
+        st.markdown("**❌ 부정 키워드 Top 5**")
+        st.table(df_neg)
+        
     # 파일 다운로드
     output = io.BytesIO()
     df.to_excel(output, index=False, engine="openpyxl")
