@@ -47,27 +47,27 @@ GPT 모델로부터 명사 기반 핵심 키워드 자동 추출</br>
 
 ---
 ### 💡 시스템 구성 단계
-[1] RPA (selenium</br>
+* [1] RPA (selenium</br>
 &nbsp;&nbsp;&nbsp; └ 삼성 커뮤니티 게시글 주기적 수집</br>
 
-[2] Raw VOC Excel 저장</br>
+* [2] Raw VOC Excel 저장</br>
 &nbsp;&nbsp; &nbsp;    └ strReview(리뷰내용) 컬럼 중심으로 VOC데이터 정리(엑셀)</br>
 
-[3] 분석 방식 선택</br>
+* [3] 분석 방식 선택</br>
 &nbsp;&nbsp;&nbsp;    ├─ ✅ Streamlit App (UI 기반 수동 분석)</br>
 &nbsp;&nbsp;&nbsp;    └─ ✅ Batch 분석 스크립트 (자동화 스케줄링 가능)</br>
 
-[4] 분석 처리 - LangChain + GPT-4.1</br>
+* [4] 분석 처리 - LangChain + GPT-4.1</br>
 &nbsp;&nbsp;&nbsp;    ├─ 감정 분석        → GPT-4.1 단일 호출</br>
 &nbsp;&nbsp;&nbsp;    ├─ 키워드 추출      → GPT-4.1 단일 호출</br>
 &nbsp;&nbsp;&nbsp;    └─ 결함유형 분석    → GPT-4.1 + AzureSearch 임베딩 기반 few-shot 분석</br>
 
-[5] 시각화
+* [5] 시각화
 &nbsp;&nbsp;&nbsp;    ├─ 감정 분포 차트</br>
 &nbsp;&nbsp;&nbsp;    ├─ 키워드 Top 차트</br>
 &nbsp;&nbsp;&nbsp;    └─ 결함유형 분포 차트</br>
 
-[6] 결과 저장</br>
+* [6] 결과 저장</br>
 &nbsp;&nbsp;&nbsp;    └ 분석결과.xlsx (엑셀 다운로드 가능)</br>
 
 * 향후 위 과정을 자동화로 검증 시스템에 분석데이터 반영 </br>
@@ -94,3 +94,4 @@ GPT 모델로부터 명사 기반 핵심 키워드 자동 추출</br>
   자주 언급되는 불만 키워드를 통해 VOC의 주요 트렌드를 파악합니다.
 
 ---
+http://hoondemo-cmfnetffhcgbe2be.koreasouth-01.azurewebsites.net/
